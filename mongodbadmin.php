@@ -89,7 +89,7 @@ function linkDocumentReferences($mongo, $document)
   foreach ($document as $key => $value) {
     if (is_array($value)) {
       if (isset($value['$ref'])) {
-        $collection = $mongo->selectDB($_REQUEST['db'])->selectCollection($value['$ref']);
+        $collection = $mongo->selectDatabase($_REQUEST['db'])->selectCollection($value['$ref']);
         $id = $value['$id'];
 
         $ref = findMongoDbDocument($value['$id'], $_REQUEST['db'], $value['$ref']);
@@ -130,8 +130,8 @@ function prepareValueForMongoDB($value)
   $customId = isset($_REQUEST['custom_id']);
 
   if (is_string($value)) {
-    $value = preg_replace('/\'_id\' => \s*MongoId::__set_state\(array\(\s*\)\)/', '\'_id\' => new MongoId("' . (isset($_REQUEST['id']) ? $_REQUEST['id'] : '') . '")', $value);
-    $value = preg_replace('/MongoId::__set_state\(array\(\s*\)\)/', 'new MongoId()', $value);
+    $value = preg_replace('/\'_id\' => \s*MongoId::__set_state\(array\(\s*\)\)/', '\'_id\' => new MongoDB\BSON\ObjectId("' . (isset($_REQUEST['id']) ? $_REQUEST['id'] : '') . '")', $value);
+    $value = preg_replace('/MongoId::__set_state\(array\(\s*\)\)/', 'new MongoDB\BSON\ObjectId()', $value);
     $value = preg_replace('/MongoDate::__set_state\(array\(\s*\'sec\' => (\d+),\s*\'usec\' => \d+,\s*\)\)/m', 'new MongoDate($1)', $value);
     $value = preg_replace('/MongoBinData::__set_state\(array\(\s*\'bin\' => \'(.*?)\',\s*\'type\' => ([1,2,3,5,128]),\s*\)\)/m', 'new MongoBinData(\'$1\', $2)', $value);
 
@@ -146,11 +146,11 @@ function prepareValueForMongoDB($value)
   $prepared = array();
   foreach ($value as $k => $v) {
     if ($k === '_id' && !$customId) {
-      $v = new MongoId($v);
+      $v = new MongoDB\BSON\ObjectId($v);
     }
 
     if ($k === '$id' && !$customId) {
-      $v = new MongoId($v);
+      $v = new MongoDB\BSON\ObjectId($v);
     }
 
     if (is_array($v)) {
@@ -234,7 +234,7 @@ try {
   // DELETE DB
   if (isset($_REQUEST['delete_db']) && $readOnly !== true) {
     $mongo
-      ->selectDB($_REQUEST['delete_db'])
+      ->selectDatabase($_REQUEST['delete_db'])
       ->drop();
 
     header('location: ' . $_SERVER['PHP_SELF']);
@@ -243,8 +243,8 @@ try {
 
   // CREATE DB
   if (isset($_REQUEST['create_db']) && $readOnly !== true) {
-    $mongo->selectDB($_REQUEST['create_db'])->createCollection('__tmp_collection_');
-    $mongo->selectDB($_REQUEST['create_db'])->dropCollection('__tmp_collection_');
+    $mongo->selectDatabase($_REQUEST['create_db'])->createCollection('__tmp_collection_');
+    //$mongo->selectDatabase($_REQUEST['create_db'])->dropCollection('__tmp_collection_');
 
     header('location: ' . $_SERVER['PHP_SELF'] . '?db=' . urlencode($_REQUEST['create_db']));
     exit;
@@ -254,7 +254,7 @@ try {
   // CREATE DB COLLECTION
   if (isset($_REQUEST['create_collection']) && $readOnly !== true) {
     $mongo
-      ->selectDB($_REQUEST['db'])
+      ->selectDatabase($_REQUEST['db'])
       ->createCollection($_REQUEST['create_collection']);
 
     header('location: ' . $_SERVER['PHP_SELF'] . '?db=' . urlencode($_REQUEST['db']) . '&collection=' . $_REQUEST['create_collection']);
@@ -264,7 +264,7 @@ try {
   // DELETE DB COLLECTION
   if (isset($_REQUEST['delete_collection']) && $readOnly !== true) {
     $mongo
-      ->selectDB($_REQUEST['db'])
+      ->selectDatabase($_REQUEST['db'])
       ->selectCollection($_REQUEST['delete_collection'])
       ->drop();
 
@@ -283,7 +283,7 @@ try {
       }
       $collection->deleteOne((array('_id' => $id)));
     } else {
-      $collection->deleteOne(array('_id' => new MongoId($_REQUEST['delete_document'])));
+      $collection->deleteOne(array('_id' => new MongoDB\BSON\ObjectId($_REQUEST['delete_document'])));
     }
 
     header('location: ' . $_SERVER['PHP_SELF'] . '?db=' . urlencode($_REQUEST['db']) . '&collection=' . $_REQUEST['collection']);
